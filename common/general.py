@@ -48,72 +48,6 @@ def shell(args: List[str]):
         hlog(f"Failed with exit code {exit_code}: {cmd}")
 
 
-@htrack(None)
-def ensure_file_downloaded(
-    source_url: str,
-    target_path: str,
-    unpack: bool = False,
-    downloader_executable: str = "wget",
-    unpack_type: Optional[str] = None,
-):
-    """Download `source_url` to `target_path` if it doesn't exist."""
-    if os.path.exists(target_path):
-        # Assume it's all good
-        hlog(f"Not downloading {source_url} because {target_path} already exists")
-        return
-
-    # Download
-    # gdown is used to download large files/zip folders from Google Drive.
-    # It bypasses security warnings which wget cannot handle.
-    if source_url.startswith("https://drive.google.com"):
-        downloader_executable = "gdown"
-    tmp_path: str = f"{target_path}.tmp"
-    shell([downloader_executable, source_url, "-O", tmp_path])
-
-    # Unpack (if needed) and put it in the right location
-    if unpack:
-        if unpack_type is None:
-            if source_url.endswith(".tar") or source_url.endswith(".tar.gz"):
-                unpack_type = "untar"
-            elif source_url.endswith(".zip"):
-                unpack_type = "unzip"
-            elif source_url.endswith(".zst"):
-                unpack_type = "unzstd"
-            else:
-                raise Exception("Failed to infer the file format from source_url. Please specify unpack_type.")
-
-        tmp2_path = target_path + ".tmp2"
-        ensure_directory_exists(tmp2_path)
-        if unpack_type == "untar":
-            shell(["tar", "xf", tmp_path, "-C", tmp2_path])
-        elif unpack_type == "unzip":
-            shell(["unzip", tmp_path, "-d", tmp2_path])
-        elif unpack_type == "unzstd":
-            dctx = zstandard.ZstdDecompressor()
-            with open(tmp_path, "rb") as ifh, open(os.path.join(tmp2_path, "data"), "wb") as ofh:
-                dctx.copy_stream(ifh, ofh)
-        else:
-            raise Exception("Invalid unpack_type")
-        files = os.listdir(tmp2_path)
-        if len(files) == 1:
-            # If contains one file, just get that one file
-            shell(["mv", os.path.join(tmp2_path, files[0]), target_path])
-            os.rmdir(tmp2_path)
-        else:
-            shell(["mv", tmp2_path, target_path])
-        os.unlink(tmp_path)
-    else:
-        # Don't decompress if desired `target_path` ends with `.gz`.
-        if source_url.endswith(".gz") and not target_path.endswith(".gz"):
-            gzip_path = f"{target_path}.gz"
-            shell(["mv", tmp_path, gzip_path])
-            # gzip writes its output to a file named the same as the input file, omitting the .gz extension
-            shell(["gzip", "-d", gzip_path])
-        else:
-            shell(["mv", tmp_path, target_path])
-    hlog(f"Finished downloading {source_url} to {target_path}")
-
-
 def format_text(text: str) -> str:
     return json.dumps(text)
 
@@ -221,55 +155,6 @@ def without_common_entries(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return [dict((key, value) for key, value in item.items() if key not in common_keys) for item in items]
 
 
-def unique_simplification(items: List[Dict[str, Any]], priority_keys: List[str]) -> List[Dict[str, Any]]:
-    """
-    Given `items` (a list of dictionaries), remove any (key, value) pairs that
-    aren't necessary to distinguish the items, removing the keys not in
-    `priority_keys` and then from the end of `priority_keys` first.
-
-    Example:
-        items = [{"model": "M1", stop: "#", n: 3}, {"model": "M1", stop: "\n", n: 3}, {"model": "M2", stop: "\n", n: 3}]
-        priority_keys = ["model"]
-    Return:
-        [{"model": "M1", stop: "#"}, {"model": "M1", stop: "\n"}, {"model": "M2"}]
-    """
-
-    def get_subitem(item: Dict[str, Any], subkeys: List[str]) -> Dict[str, Any]:
-        return {key: item.get(key) for key in subkeys}
-
-    def get_keys(item: Dict[str, Any]) -> List[str]:
-        """Return the keys of `item`, putting `priority_keys` first."""
-        keys = []
-        for key in priority_keys:
-            if key in item:
-                keys.append(key)
-        for key in item:
-            if key not in priority_keys:
-                keys.append(key)
-        return keys
-
-    # Strip out common entries first
-    items = without_common_entries(items)
-
-    # Go through and remove more keys
-    new_items: List[Dict[str, Any]] = []
-    for item in items:
-        # For each item, go through the keys in order
-        keys = get_keys(item)
-
-        for i in range(len(keys)):
-            # For each prefix of the keys, keep it if it uniquely identifies
-            # this item.
-            subkeys = keys[: i + 1]
-            subitem = get_subitem(item, subkeys)
-            if sum(1 if get_subitem(item2, subkeys) == subitem else 0 for item2 in items) == 1:
-                item = subitem
-                break
-        new_items.append(item)
-
-    return new_items
-
-
 def generate_unique_id() -> str:
     """
     Generate a unique ID (e.g., 77437ea482144bf7b9275a0acee997db).
@@ -283,13 +168,3 @@ def get_file_name(path: str) -> str:
     """
     return os.path.split(path)[-1]
 
-
-def safe_symlink(src: str, dest: str) -> None:
-    """
-    Creates a symlink at `dest`. `src` and `dest` can be relative paths.
-    """
-    src = os.path.abspath(src)
-    dest = os.path.abspath(dest)
-
-    if not os.path.exists(dest):
-        os.symlink(src, dest)
