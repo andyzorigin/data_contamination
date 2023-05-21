@@ -6,7 +6,6 @@ import inspect
 
 from common.object_spec import ObjectSpec, create_object
 from common.general import format_text, format_split, format_tags, indent_lines
-# from helm.benchmark.augmentations.perturbation_description import PerturbationDescription
 
 """ Data splits """
 TRAIN_SPLIT: str = "train"
@@ -129,9 +128,6 @@ class Instance:
 
     id: Optional[str] = None
     """Used to group Instances that were created from a particular Instance through data augmentation"""
-
-    # perturbation: Optional[PerturbationDescription] = None
-    """Description of the Perturbation that was applied when creating this Instance"""
 
     contrast_inputs: Optional[List[Input]] = None
     """Perturbed input as defined by contrast sets (if available)"""
