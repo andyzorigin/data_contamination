@@ -1,6 +1,6 @@
 from typing import List
 
-from helm.benchmark.contamination.compute_contamination_metrics import (
+from compute_contamination_metrics import (
     compute_scenario_document_contamination,
     create_all_contamination_stats,
     create_ngram_index,
@@ -9,15 +9,15 @@ from helm.benchmark.contamination.compute_contamination_metrics import (
     NgramIndex,
     AllContaminationStats,
 )
-from helm.benchmark.contamination.light_scenario import LightScenario, LightInstance, LightScenarioKey
-from helm.benchmark.contamination.light_tokenizer import LightTokenizer, DefaultTokenizer
-from helm.benchmark.contamination.contamination_stats import (
+from light_scenario import LightScenario, LightInstance, LightScenarioKey
+from light_tokenizer import LightTokenizer, DefaultTokenizer
+from contamination_stats import (
     ContaminationStats,
     ContaminationStatsKey,
     PART_INPUT,
     PART_REF,
 )
-from helm.common.general import asdict_without_nones
+from common.general import asdict_without_nones
 
 N_VALUES = [5, 13]
 
