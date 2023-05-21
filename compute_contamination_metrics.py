@@ -9,18 +9,18 @@ from typing import Dict
 from tqdm import tqdm
 from dataclasses import dataclass
 
-from helm.benchmark.contamination.light_scenario import LightInstance, LightScenario, LightScenarioKey
-from helm.benchmark.contamination.light_tokenizer import LightTokenizer, DefaultTokenizer
-from helm.benchmark.contamination.load_documents import get_document_iterator
-from helm.benchmark.contamination.contamination_stats import (
+from light_scenario import LightInstance, LightScenario, LightScenarioKey
+from light_tokenizer import LightTokenizer, DefaultTokenizer
+from load_documents import get_document_iterator
+from contamination_stats import (
     ContaminationStats,
     ContaminationStatsKey,
     PART_INPUT,
     PART_REF,
 )
-from helm.common.hierarchical_logger import hlog, htrack_block
-from helm.common.general import asdict_without_nones, write
-from helm.benchmark.scenarios.scenario import ScenarioSpec
+from common.hierarchical_logger import hlog, htrack_block
+from common.general import asdict_without_nones, write
+from scenarios.scenario import ScenarioSpec
 
 
 # The n values of the ngrams to be computed
